@@ -211,12 +211,18 @@ if (!roomId) {
 
 /* 🛠️ CREATE ROOM */
 function createRoom() {
-  const name = roomName.value.trim();
-  const limit = Number(limitInput?.value || limit.value);
+  const nameInput = document.getElementById("roomName");
+  const limitInput = document.getElementById("limit");
+
+  const name = nameInput.value.trim();
+  const limit = Number(limitInput.value);
 
   if (!name || !limit) return alert("Fill everything");
+  if (limit < 1) return alert("Limit must be at least 1");
 
-  const id = name.toLowerCase().replace(/\s+/g, "-");
+  // Unique room ID to avoid collisions
+  const id = name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
+
   db.ref("rooms/" + id).set({ name, maxUsers: limit });
   saveRoom(id, name);
   location.search = "?room=" + id;
@@ -233,11 +239,15 @@ function copyRoomLink() {
 
 /* 👥 JOIN */
 function joinRoom(name) {
-  usersRef.once("value", s => {
-    if (maxUsers !== null && s.numChildren() >= maxUsers && !s.hasChild(name)) {
+  if (!usersRef) return;
+
+  usersRef.once("value", snapshot => {
+    if (maxUsers !== null && snapshot.numChildren() >= maxUsers && !snapshot.hasChild(name)) {
       alert("Room full");
       goBack();
-    } else usersRef.child(name).set(true);
+    } else {
+      usersRef.child(name).set(true);
+    }
   });
 }
 
