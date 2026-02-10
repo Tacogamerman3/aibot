@@ -5,11 +5,11 @@
 <title>SchoolChat</title>
 
 <style>
-      @media screen and (min-width: 768px) {
-            body {
-                zoom: 90%;
-            }
-        }
+@media screen and (min-width: 768px) {
+    body {
+        zoom: 90%;
+    }
+}
 :root {
   --bg: #0b0f10;
   --panel: #11181a;
@@ -149,7 +149,8 @@ if (!roomId) {
   chatRef = db.ref("globalChat");
 
   let ui = `
-    <input id="limit" type="number" min="1" placeholder="how many people">
+    <input id="roomName" type="text" placeholder="Room name">
+    <input id="limit" type="number" min="1" placeholder="Max users">
     <button onclick="createRoom()">Create Private Room</button>
   `;
 
@@ -159,7 +160,11 @@ if (!roomId) {
 
   document.getElementById("roomSetup").innerHTML = ui;
 } else {
-  document.getElementById("top").innerText = "🔒 Private Room";
+  // Fetch room name from Firebase
+  db.ref("rooms/" + roomId + "/name").once("value", snap => {
+    const roomName = snap.val() || "Private Room";
+    document.getElementById("top").innerText = "🔒 " + roomName;
+  });
 
   document.getElementById("roomSetup").innerHTML = `
     <button onclick="copyRoomLink()">📋 Copy Room Link</button>
@@ -177,10 +182,17 @@ if (!roomId) {
 /* 🛠️ CREATE ROOM */
 function createRoom() {
   const limit = document.getElementById("limit").value;
+  const roomName = document.getElementById("roomName").value.trim();
   if (!limit || limit < 1) return alert("Enter a valid user limit");
+  if (!roomName) return alert("Enter a room name");
 
-  const newRoom = generateRoomId();
-  db.ref("rooms/" + newRoom).set({ maxUsers: Number(limit) });
+  // Convert room name to URL-friendly ID
+  const newRoom = roomName.toLowerCase().replace(/\s+/g, '-');
+
+  db.ref("rooms/" + newRoom).set({
+    name: roomName,
+    maxUsers: Number(limit)
+  });
 
   localStorage.setItem("lastPrivateRoom", newRoom);
   window.location.search = "?room=" + newRoom;
@@ -253,18 +265,16 @@ chatRef.limitToLast(100).on("child_added", snap => {
       ? `<button class="delete-btn" onclick="deleteMessage('${key}')">Delete</button>`
       : "";
 
-  // Function to convert URLs in text to clickable links
-function linkify(text) {
-  const urlPattern = /(https?:\/\/[^\s]+)/g;
-  return text.replace(urlPattern, '<a href="$1" target="_blank" style="color: var(--teal); text-decoration: underline;">$1</a>');
-}
+  function linkify(text) {
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlPattern, '<a href="$1" target="_blank" style="color: var(--teal); text-decoration: underline;">$1</a>');
+  }
 
-div.innerHTML = `
-  <b>${d.name}</b>: ${linkify(d.message)}
-  ${deleteBtn}
-  <div class="time">${d.time}</div>
-`;
-
+  div.innerHTML = `
+    <b>${d.name}</b>: ${linkify(d.message)}
+    ${deleteBtn}
+    <div class="time">${d.time}</div>
+  `;
 
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
