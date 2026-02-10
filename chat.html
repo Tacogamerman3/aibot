@@ -198,16 +198,33 @@ if (!roomId) {
 
 /* 🛠️ CREATE ROOM */
 function createRoom() {
-  const name = roomName.value.trim();
-  const limit = limitInput.value || limit.value;
-  if (!name || limit < 1) return alert("Invalid input");
+  const nameInput = document.getElementById("roomName");
+  const limitInput = document.getElementById("limit");
+
+  const name = nameInput.value.trim();
+  const limit = Number(limitInput.value);
+
+  if (!name) {
+    alert("Enter a room name");
+    return;
+  }
+
+  if (!limit || limit < 1) {
+    alert("Enter a valid user limit");
+    return;
+  }
 
   const id = name.toLowerCase().replace(/\s+/g, "-");
 
-  db.ref("rooms/" + id).set({ name, maxUsers: Number(limit) });
+  db.ref("rooms/" + id).set({
+    name: name,
+    maxUsers: limit
+  });
+
   saveRoom(id, name);
   location.search = "?room=" + id;
 }
+
 
 function goBack() {
   location.href = location.pathname;
