@@ -194,13 +194,11 @@ if (!roomId) {
   chatRef = db.ref("rooms/" + roomId + "/messages");
   usersRef = db.ref("rooms/" + roomId + "/users");
 
-  // Load room name
   db.ref("rooms/" + roomId + "/name").once("value", s => {
     top.innerText = "🔒 " + (s.val() || "Private Room");
     saveRoom(roomId, s.val());
   });
 
-  // Load max users
   db.ref("rooms/" + roomId + "/maxUsers").once("value", s => {
     maxUsers = s.val();
   });
@@ -222,6 +220,7 @@ function createRoom() {
   if (!name || !limit) return alert("Fill everything");
   if (limit < 1) return alert("Limit must be at least 1");
 
+  // Unique room ID to avoid collisions
   const id = name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
 
   db.ref("rooms/" + id).set({ name, maxUsers: limit });
@@ -238,72 +237,60 @@ function copyRoomLink() {
   alert("Link copied");
 }
 
-/* 👥 JOIN AND LISTEN */
-function joinRoomAndListen(name) {
+/* 👥 JOIN */
+function joinRoom(name) {
   if (!usersRef) return;
 
-  usersRef.once("value").then(snapshot => {
+  usersRef.once("value", snapshot => {
     if (maxUsers !== null && snapshot.numChildren() >= maxUsers && !snapshot.hasChild(name)) {
       alert("Room full");
       goBack();
-      return;
+    } else {
+      usersRef.child(name).set(true);
     }
-
-    // Add user to the room
-    usersRef.child(name).set(true);
-
-    // Only now start listening to messages
-    chatRef.limitToLast(100).on("child_added", s => {
-      const d = s.val();
-      const key = s.key;
-
-      const div = document.createElement("div");
-      div.className = "msg";
-      div.innerHTML = `
-        <b>${d.name}</b>: ${d.message}
-        <div class="time">${d.time}</div>
-        <button class="delete-btn" style="display:${adminMode ? "inline" : "none"}"
-          onclick="deleteMessage('${key}')">🗑️</button>
-      `;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    });
   });
 }
 
-/* ✉️ SEND MESSAGE */
+/* ✉️ SEND */
 function sendMessage() {
   const name = document.getElementById("name").value || "Anonymous";
   const msg = message.value;
   if (!msg) return;
+  if (roomId) joinRoom(name);
 
-  if (roomId) {
-    // Join room first (enforces limit) and then send message
-    joinRoomAndListen(name);
-    usersRef.child(name).set(true); // Ensure they are marked
-    chatRef.push({
-      name,
-      message: msg,
-      time: new Date().toLocaleString()
-    });
-  } else {
-    // Global chat
-    chatRef.push({
-      name,
-      message: msg,
-      time: new Date().toLocaleString()
-    });
-  }
+  chatRef.push({
+    name,
+    message: msg,
+    time: new Date().toLocaleString()
+  });
 
   message.value = "";
 }
 
-/* 🗑️ DELETE MESSAGE */
+/* 🗑️ DELETE */
 function deleteMessage(key) {
   if (!adminMode) return;
   if (!confirm("Delete this message?")) return;
   chatRef.child(key).remove();
 }
+
+/* 👂 LISTEN */
+chatRef.limitToLast(100).on("child_added", s => {
+  const d = s.val();
+  const key = s.key;
+
+  const div = document.createElement("div");
+  div.className = "msg";
+  div.innerHTML = `
+    <b>${d.name}</b>: ${d.message}
+    <div class="time">${d.time}</div>
+    <button class="delete-btn" style="display:${adminMode ? "inline" : "none"}"
+      onclick="deleteMessage('${key}')">🗑️</button>
+  `;
+
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+});
 </script>
 
 </body>
