@@ -6,10 +6,9 @@
 
 <style>
 @media screen and (min-width: 768px) {
-    body {
-        zoom: 90%;
-    }
+  body { zoom: 90%; }
 }
+
 :root {
   --bg: #0b0f10;
   --panel: #11181a;
@@ -71,9 +70,7 @@ input {
   color: var(--text);
 }
 
-input::placeholder {
-  color: var(--muted);
-}
+input::placeholder { color: var(--muted); }
 
 button {
   background: var(--teal);
@@ -85,9 +82,7 @@ button {
   font-weight: bold;
 }
 
-button:hover {
-  background: var(--teal-dark);
-}
+button:hover { background: var(--teal-dark); }
 
 .delete-btn {
   background: transparent;
@@ -130,19 +125,40 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+/* 🧠 PREVIOUS ROOMS */
+function getPreviousRooms() {
+  return JSON.parse(localStorage.getItem("previousRooms") || "[]");
+}
+
+function saveRoom(roomId, roomName = roomId) {
+  let rooms = getPreviousRooms();
+  rooms = rooms.filter(r => r.id !== roomId);
+  rooms.unshift({ id: roomId, name: roomName });
+  rooms = rooms.slice(0, 10);
+  localStorage.setItem("previousRooms", JSON.stringify(rooms));
+}
+
+function renderPreviousRooms() {
+  const rooms = getPreviousRooms();
+  if (!rooms.length) return "";
+
+  let html = `<h3 style="color:var(--teal)">Previous Rooms</h3>`;
+  rooms.forEach(r => {
+    html += `
+      <button onclick="window.location.search='?room=${r.id}'">
+        🔒 ${r.name}
+      </button><br>
+    `;
+  });
+  return html;
+}
+
 /* 🔗 ROOM LOGIC */
 const params = new URLSearchParams(window.location.search);
 let roomId = params.get("room");
 let chatRef;
 let usersRef;
 let maxUsers = null;
-
-const lastRoom = localStorage.getItem("lastPrivateRoom");
-
-/* 🧠 ROOM ID */
-function generateRoomId() {
-  return Math.random().toString(36).substring(2, 10);
-}
 
 /* 🚪 SETUP */
 if (!roomId) {
@@ -154,29 +170,26 @@ if (!roomId) {
     <button onclick="createRoom()">Create Private Room</button>
   `;
 
-  if (lastRoom) {
-    ui += `<br><button onclick="goToLastRoom()">🔒 Go back to my private room</button>`;
-  }
+  document.getElementById("roomSetup").innerHTML =
+    ui + "<hr>" + renderPreviousRooms();
 
-  document.getElementById("roomSetup").innerHTML = ui;
 } else {
-  // Fetch room name from Firebase
+  chatRef = db.ref("rooms/" + roomId + "/messages");
+  usersRef = db.ref("rooms/" + roomId + "/users");
+
   db.ref("rooms/" + roomId + "/name").once("value", snap => {
     const roomName = snap.val() || "Private Room";
     document.getElementById("top").innerText = "🔒 " + roomName;
+    saveRoom(roomId, roomName);
   });
-
-  document.getElementById("roomSetup").innerHTML = `
-    <button onclick="copyRoomLink()">📋 Copy Room Link</button>
-    <button onclick="goBack()">🔙 Back to Main Chat</button>
-  `;
-
-  chatRef = db.ref("rooms/" + roomId + "/messages");
-  usersRef = db.ref("rooms/" + roomId + "/users");
 
   db.ref("rooms/" + roomId + "/maxUsers").once("value", snap => {
     maxUsers = snap.val();
   });
+
+  document.getElementById("roomSetup").innerHTML = `
+    <button onclick="copyRoomLink()">📋 Copy Room Link</button>
+  `;
 }
 
 /* 🛠️ CREATE ROOM */
@@ -186,7 +199,6 @@ function createRoom() {
   if (!limit || limit < 1) return alert("Enter a valid user limit");
   if (!roomName) return alert("Enter a room name");
 
-  // Convert room name to URL-friendly ID
   const newRoom = roomName.toLowerCase().replace(/\s+/g, '-');
 
   db.ref("rooms/" + newRoom).set({
@@ -194,22 +206,13 @@ function createRoom() {
     maxUsers: Number(limit)
   });
 
-  localStorage.setItem("lastPrivateRoom", newRoom);
+  saveRoom(newRoom, roomName);
   window.location.search = "?room=" + newRoom;
-}
-
-function goToLastRoom() {
-  const room = localStorage.getItem("lastPrivateRoom");
-  if (room) window.location.search = "?room=" + room;
 }
 
 function copyRoomLink() {
   navigator.clipboard.writeText(window.location.href);
   alert("Room link copied!");
-}
-
-function goBack() {
-  window.location.href = window.location.pathname;
 }
 
 /* 👥 JOIN ROOM */
@@ -220,14 +223,14 @@ function joinRoom(name) {
     const count = snap.numChildren();
     if (maxUsers !== null && count >= maxUsers && !snap.hasChild(name)) {
       alert("Room is full");
-      goBack();
+      window.location.href = window.location.pathname;
       return;
     }
     usersRef.child(name).set(true);
   });
 }
 
-/* ✉️ SEND */
+/* ✉️ SEND MESSAGE */
 function sendMessage() {
   const name = document.getElementById("name").value || "Anonymous";
   const message = document.getElementById("message").value;
@@ -266,8 +269,10 @@ chatRef.limitToLast(100).on("child_added", snap => {
       : "";
 
   function linkify(text) {
-    const urlPattern = /(https?:\/\/[^\s]+)/g;
-    return text.replace(urlPattern, '<a href="$1" target="_blank" style="color: var(--teal); text-decoration: underline;">$1</a>');
+    return text.replace(
+      /(https?:\/\/[^\s]+)/g,
+      '<a href="$1" target="_blank" style="color:var(--teal)">$1</a>'
+    );
   }
 
   div.innerHTML = `
