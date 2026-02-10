@@ -36,7 +36,7 @@ body {
 }
 
 #chat {
-  height: 60vh;
+  height: 50vh;
   overflow-y: auto;
   padding: 12px;
 }
@@ -46,6 +46,15 @@ body {
   padding: 8px;
   margin-bottom: 8px;
   border-left: 3px solid var(--teal);
+}
+
+.msg.selectable {
+  cursor: pointer;
+}
+
+.msg.selected {
+  background: #3f1d1d;
+  border-left-color: var(--f87171);
 }
 
 .time {
@@ -79,10 +88,17 @@ button:hover {
   background: var(--teal-dark);
 }
 
+#bulkDelete {
+  display: none;
+  text-align: center;
+  padding: 6px;
+}
+
 #users {
   background: #0f1416;
   padding: 8px;
   border-top: 1px solid #1f2933;
+  display: none;
 }
 
 .user {
@@ -104,10 +120,15 @@ button:hover {
 
 <div id="top">SchoolChat</div>
 <div id="roomSetup"></div>
+
+<div id="bulkDelete">
+  <button onclick="deleteSelected()">🗑️ Delete Selected</button>
+</div>
+
 <div id="chat"></div>
 
-<div id="users" style="display:none">
-  <b>People in room</b>
+<div id="users">
+  <b>People in room:</b>
   <div id="userList"></div>
 </div>
 
@@ -131,19 +152,25 @@ firebase.initializeApp({
 
 const db = firebase.database();
 
-/* 🔗 ROOM */
+/* 🔗 ROOM VARIABLES */
 const params = new URLSearchParams(location.search);
 const roomId = params.get("room");
 let chatRef, usersRef, bansRef, creatorRef;
 let myName = "";
 let isCreator = false;
+let adminMode = false;
+let secretBuffer = "";
+let selectedMessages = new Set();
+
+/* 👀 ROOM SETUP */
+const roomSetupDiv = document.getElementById("roomSetup");
 
 if (!roomId) {
-  roomSetup.innerHTML = `
-    <input id="roomName" placeholder="Room name">
-    <button onclick="createRoom()">Create Room</button>
-  `;
   chatRef = db.ref("globalChat");
+  roomSetupDiv.innerHTML = `
+    <input id="roomName" placeholder="Room name">
+    <button onclick="createRoom()">Create Private Room</button>
+  `;
 } else {
   chatRef = db.ref("rooms/" + roomId + "/messages");
   usersRef = db.ref("rooms/" + roomId + "/users");
@@ -152,6 +179,7 @@ if (!roomId) {
 
   document.getElementById("users").style.display = "block";
 
+  // check if creator
   creatorRef.once("value", s => {
     if (s.val() === localStorage.getItem("creator:" + roomId)) {
       isCreator = true;
@@ -159,40 +187,42 @@ if (!roomId) {
   });
 
   usersRef.on("value", snap => {
-    userList.innerHTML = "";
+    const list = document.getElementById("userList");
+    list.innerHTML = "";
     snap.forEach(u => {
       const name = u.key;
       const div = document.createElement("div");
       div.className = "user";
       div.innerHTML = `
-        <span>${name}${isCreator && name === myName ? " (you)" : ""}</span>
-        ${isCreator && name !== myName
-          ? `<button class="kick" onclick="kick('${name}')">kick</button>`
-          : ""}
+        <span>${name}${name === myName ? " (you)" : ""}</span>
+        ${isCreator && name !== myName ? `<button class="kick" onclick="kick('${name}')">kick</button>` : ""}
       `;
-      userList.appendChild(div);
+      list.appendChild(div);
     });
   });
 }
 
 /* 🏗️ CREATE ROOM */
 function createRoom() {
-  const name = roomName.value.trim();
-  if (!name) return alert("Room name required");
+  const nameInput = document.getElementById("roomName");
+  const roomNameValue = nameInput.value.trim();
+  if (!roomNameValue) return alert("Room name required");
 
-  const id = name.toLowerCase().replace(/\s+/g, "-");
-  db.ref("rooms/" + id).set({
-    name,
-    creator: name
-  });
-
-  localStorage.setItem("creator:" + id, name);
-  location.search = "?room=" + id;
+  const id = roomNameValue.toLowerCase().replace(/\s+/g, "-");
+  const roomRef = db.ref("rooms/" + id);
+  roomRef.set({
+    name: roomNameValue,
+    creator: roomNameValue
+  }).then(() => {
+    localStorage.setItem("creator:" + id, roomNameValue);
+    location.search = "?room=" + id;
+  }).catch(err => alert("Failed to create room: " + err));
 }
 
-/* 👥 JOIN */
+/* 👥 JOIN ROOM */
 function joinRoom() {
-  myName = document.getElementById("name").value || "Anonymous";
+  myName = document.getElementById("name").value.trim() || "Anonymous";
+  if (!roomId) return;
 
   bansRef.once("value", s => {
     if (s.hasChild(myName)) {
@@ -205,7 +235,7 @@ function joinRoom() {
   });
 }
 
-/* 🥾 KICK */
+/* 🥾 KICK USERS */
 function kick(name) {
   if (!isCreator) return;
   if (!confirm(`Kick ${name} permanently?`)) return;
@@ -214,11 +244,10 @@ function kick(name) {
   usersRef.child(name).remove();
 }
 
-/* ✉️ SEND */
+/* ✉️ SEND MESSAGE */
 function sendMessage() {
   if (!myName && roomId) joinRoom();
-
-  const msg = message.value.trim();
+  const msg = document.getElementById("message").value.trim();
   if (!msg) return;
 
   chatRef.push({
@@ -227,20 +256,59 @@ function sendMessage() {
     time: new Date().toLocaleString()
   });
 
-  message.value = "";
+  document.getElementById("message").value = "";
 }
 
-/* 👂 LISTEN */
+/* 🔓 ADMIN MODE - MULTI DELETE */
+document.addEventListener("keydown", e => {
+  if (e.key.length === 1) {
+    secretBuffer += e.key.toLowerCase();
+    secretBuffer = secretBuffer.slice(-20);
+    if (secretBuffer.includes("opensesame")) {
+      adminMode = true;
+      alert("🔓 Delete mode enabled");
+      document.getElementById("bulkDelete").style.display = "block";
+      document.querySelectorAll(".msg").forEach(m => m.classList.add("selectable"));
+    }
+  }
+});
+
+function deleteSelected() {
+  if (!adminMode || selectedMessages.size === 0) return;
+  if (!confirm(`Delete ${selectedMessages.size} messages?`)) return;
+  selectedMessages.forEach(key => chatRef.child(key).remove());
+  selectedMessages.clear();
+}
+
+/* 👂 LISTEN FOR MESSAGES */
 chatRef.limitToLast(100).on("child_added", s => {
   const d = s.val();
+  const key = s.key;
+
   const div = document.createElement("div");
   div.className = "msg";
+  div.dataset.key = key;
   div.innerHTML = `
     <b>${d.name}</b>: ${d.message}
     <div class="time">${d.time}</div>
   `;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+
+  // Multi-select
+  div.onclick = () => {
+    if (!adminMode) return;
+    if (selectedMessages.has(key)) {
+      selectedMessages.delete(key);
+      div.classList.remove("selected");
+    } else {
+      selectedMessages.add(key);
+      div.classList.add("selected");
+    }
+  };
+
+  if (adminMode) div.classList.add("selectable");
+
+  document.getElementById("chat").appendChild(div);
+  document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
 });
 </script>
 
