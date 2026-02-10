@@ -4,7 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Button Example</title>
-  <style>
+   <style>
+    /* Scale the entire page to 90% */
+    html {
+      transform: scale(0.9);       /* Zoom out to 90% */
+      transform-origin: top left;  /* Anchor scaling to top-left */
+      width: 111.11%;              /* Compensate width so content fits */
+    }
+    
     /* Position the button in the top-right corner */
     .top-right-button {
       position: fixed;
