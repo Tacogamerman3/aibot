@@ -1,268 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>SchoolChat</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SchoolChat</title>
+  <style>
+    /* Basic reset and styling */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f4f9;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-<style>
-      @media screen and (min-width: 768px) {
-            body {
-                zoom: 90%;
-            }
-        }
-:root {
-  --bg: #0b0f10;
-  --panel: #11181a;
-  --teal: #14b8a6;
-  --teal-dark: #0f766e;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
-}
+    header {
+      background: #4CAF50;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 24px;
+      position: relative;
+    }
 
-body {
-  font-family: Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  margin: 0;
-}
+    #people-count {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+    }
 
-#top {
-  background: var(--panel);
-  padding: 10px;
-  text-align: center;
-  color: var(--teal);
-  font-weight: bold;
-}
+    #chat-box {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      background: #fff;
+      border-top: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+    }
 
-#roomSetup {
-  padding: 10px;
-  background: #0f1416;
-  text-align: center;
-}
+    .message {
+      margin-bottom: 10px;
+      word-wrap: break-word;
+    }
 
-#chat {
-  height: 70vh;
-  overflow-y: auto;
-  padding: 12px;
-}
+    #input-container {
+      display: flex;
+      padding: 10px;
+      background: #eee;
+    }
 
-.msg {
-  background: #0f1416;
-  padding: 8px 10px;
-  margin-bottom: 8px;
-  border-left: 3px solid var(--teal);
-}
+    #message-input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
 
-.time {
-  font-size: 0.8em;
-  color: var(--muted);
-}
+    #send-btn {
+      padding: 10px 20px;
+      margin-left: 10px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
 
-#input {
-  display: flex;
-  background: var(--panel);
-}
+    #send-btn:hover {
+      background: #45a049;
+    }
 
-input {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  background: #0f1416;
-  color: var(--text);
-}
-
-input::placeholder {
-  color: var(--muted);
-}
-
-button {
-  background: var(--teal);
-  color: #002;
-  border: none;
-  padding: 8px 12px;
-  cursor: pointer;
-  margin: 3px;
-  font-weight: bold;
-}
-
-button:hover {
-  background: var(--teal-dark);
-}
-
-.delete-btn {
-  background: transparent;
-  color: #f87171;
-  border: none;
-  cursor: pointer;
-  font-size: 0.8em;
-  margin-left: 6px;
-}
-</style>
+    /* Make links in messages clickable */
+    .message a {
+      color: #1a0dab;
+      text-decoration: underline;
+    }
+  </style>
 </head>
-
 <body>
 
-<div id="top">SchoolChat</div>
-<div id="roomSetup"></div>
-<div id="chat"></div>
+  <header>
+    SchoolChat
+    <span id="people-count">People: 1</span>
+  </header>
 
-<div id="input">
-  <input id="name" placeholder="Your name">
-  <input id="message" placeholder="Type message">
-  <button onclick="sendMessage()">Send</button>
-</div>
+  <div id="chat-box">
+    <div class="message">Welcome to SchoolChat!</div>
+  </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <div id="input-container">
+    <input type="text" id="message-input" placeholder="Type a message..." />
+    <button id="send-btn">Send</button>
+  </div>
 
-<script>
-/* 🔧 FIREBASE CONFIG */
-const firebaseConfig = {
-  apiKey: "AIzaSyBY9HBBcV_YNZ020xbhukg6GqGEreF6QD4",
-  authDomain: "jewsjewsjewsjewsjews.firebaseapp.com",
-  databaseURL: "https://jewsjewsjewsjewsjews-default-rtdb.firebaseio.com",
-  projectId: "jewsjewsjewsjewsjews",
-  storageBucket: "jewsjewsjewsjewsjews.firebasestorage.app",
-  messagingSenderId: "916953901589",
-  appId: "1:916953901589:web:bedc562fe6a9884a597c1c"
-};
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const input = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const peopleCount = document.getElementById('people-count');
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    let people = 1; // Initial number of people
 
-/* 🔗 ROOM LOGIC */
-const params = new URLSearchParams(window.location.search);
-let roomId = params.get("room");
-let chatRef;
-let usersRef;
-let maxUsers = null;
-
-const lastRoom = localStorage.getItem("lastPrivateRoom");
-
-/* 🧠 ROOM ID */
-function generateRoomId() {
-  return Math.random().toString(36).substring(2, 10);
-}
-
-/* 🚪 SETUP */
-if (!roomId) {
-  chatRef = db.ref("globalChat");
-
-  let ui = `
-    <input id="limit" type="number" min="1" placeholder="how many people">
-    <button onclick="createRoom()">Create Private Room</button>
-  `;
-
-  if (lastRoom) {
-    ui += `<br><button onclick="goToLastRoom()">🔒 Go back to my private room</button>`;
-  }
-
-  document.getElementById("roomSetup").innerHTML = ui;
-} else {
-  document.getElementById("top").innerText = "🔒 Private Room";
-
-  document.getElementById("roomSetup").innerHTML = `
-    <button onclick="copyRoomLink()">📋 Copy Room Link</button>
-    <button onclick="goBack()">🔙 Back to Main Chat</button>
-  `;
-
-  chatRef = db.ref("rooms/" + roomId + "/messages");
-  usersRef = db.ref("rooms/" + roomId + "/users");
-
-  db.ref("rooms/" + roomId + "/maxUsers").once("value", snap => {
-    maxUsers = snap.val();
-  });
-}
-
-/* 🛠️ CREATE ROOM */
-function createRoom() {
-  const limit = document.getElementById("limit").value;
-  if (!limit || limit < 1) return alert("Enter a valid user limit");
-
-  const newRoom = generateRoomId();
-  db.ref("rooms/" + newRoom).set({ maxUsers: Number(limit) });
-
-  localStorage.setItem("lastPrivateRoom", newRoom);
-  window.location.search = "?room=" + newRoom;
-}
-
-function goToLastRoom() {
-  const room = localStorage.getItem("lastPrivateRoom");
-  if (room) window.location.search = "?room=" + room;
-}
-
-function copyRoomLink() {
-  navigator.clipboard.writeText(window.location.href);
-  alert("Room link copied!");
-}
-
-function goBack() {
-  window.location.href = window.location.pathname;
-}
-
-/* 👥 JOIN ROOM */
-function joinRoom(name) {
-  if (!usersRef) return;
-
-  usersRef.once("value", snap => {
-    const count = snap.numChildren();
-    if (maxUsers !== null && count >= maxUsers && !snap.hasChild(name)) {
-      alert("Room is full");
-      goBack();
-      return;
+    // Update people count (for demo purposes, increment each message)
+    function updatePeopleCount() {
+      people++;
+      peopleCount.textContent = `People: ${people}`;
     }
-    usersRef.child(name).set(true);
-  });
-}
 
-/* ✉️ SEND */
-function sendMessage() {
-  const name = document.getElementById("name").value || "Anonymous";
-  const message = document.getElementById("message").value;
-  if (!message) return;
+    // Convert URLs to clickable links
+    function linkify(text) {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank">${url}</a>`);
+    }
 
-  if (roomId) joinRoom(name);
+    function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
 
-  chatRef.push({
-    name,
-    message,
-    time: new Date().toLocaleString()
-  });
+      const message = document.createElement('div');
+      message.classList.add('message');
+      message.innerHTML = linkify(text);
 
-  document.getElementById("message").value = "";
-}
+      chatBox.appendChild(message);
+      chatBox.scrollTop = chatBox.scrollHeight;
 
-/* 🗑️ DELETE MESSAGE */
-function deleteMessage(key) {
-  if (confirm("Delete this message?")) {
-    chatRef.child(key).remove();
-  }
-}
+      input.value = '';
+      updatePeopleCount();
+    }
 
-/* 👂 LISTEN */
-chatRef.limitToLast(100).on("child_added", snap => {
-  const d = snap.val();
-  const key = snap.key;
-  const me = document.getElementById("name").value;
-
-  const div = document.createElement("div");
-  div.className = "msg";
-
-  const deleteBtn =
-    d.name === me
-      ? `<button class="delete-btn" onclick="deleteMessage('${key}')">Delete</button>`
-      : "";
-
-  div.innerHTML = `
-    <b>${d.name}</b>: ${d.message}
-    ${deleteBtn}
-    <div class="time">${d.time}</div>
-  `;
-
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-});
-</script>
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
 
 </body>
 </html>
