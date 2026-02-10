@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Global Chat with Private Replies</title>
+<title>Bowie Chat</title>
 
 <style>
 body {
@@ -10,6 +10,11 @@ body {
   background:#111;
   color:#eee;
   margin:0;
+}
+#mode {
+  background:#222;
+  padding:8px;
+  text-align:center;
 }
 #chat {
   height:70vh;
@@ -20,14 +25,14 @@ body {
   margin-bottom:10px;
 }
 .time {
-  color:#888;
   font-size:0.8em;
+  color:#888;
 }
 button {
   background:#3b82f6;
   border:none;
   color:white;
-  padding:5px 8px;
+  padding:4px 7px;
   cursor:pointer;
   margin-left:5px;
 }
@@ -39,17 +44,12 @@ input {
   padding:10px;
   border:none;
 }
-#mode {
-  padding:5px;
-  background:#222;
-  text-align:center;
-}
 </style>
 </head>
 
 <body>
 
-<div id="mode">🌍 Global Chat</div>
+<div id="mode">Bowie Chat</div>
 <div id="chat"></div>
 
 <div id="input">
@@ -62,34 +62,56 @@ input {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+/* 🔧 FIREBASE CONFIG */
 const firebaseConfig = {
-  apiKey: "AIzaSyBY9HBBcV_YNZ020xbhukg6GqGEreF6QD4",
-  authDomain: "jewsjewsjewsjewsjews.firebaseapp.com",
-  databaseURL: "https://jewsjewsjewsjewsjews-default-rtdb.firebaseio.com",
-  projectId: "jewsjewsjewsjewsjews",
-  storageBucket: "jewsjewsjewsjewsjews.firebasestorage.app",
-  messagingSenderId: "916953901589",
-  appId: "1:916953901589:web:bedc562fe6a9884a597c1c",
-  measurementId: "G-R69WHE1XCV"
-}
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+/* 🔁 STATE */
 let currentMode = "global";
 let privateWith = null;
 let chatRef = db.ref("globalChat");
 
+/* 🔔 LISTEN FOR PRIVATE INBOX */
+function listenForInbox() {
+  const me = document.getElementById("name").value;
+  if (!me) return;
+
+  db.ref("privateInbox/" + me).on("child_added", snap => {
+    const data = snap.val();
+    const from = data.from;
+
+    if (currentMode === "global") {
+      if (confirm(`🔔 Private message from ${from}. Open chat?`)) {
+        openPrivateChat(from);
+      }
+    }
+  });
+}
+
+document.getElementById("name").addEventListener("blur", listenForInbox);
+
+/* 🔄 SWITCH TO GLOBAL */
 function switchToGlobal() {
   currentMode = "global";
   privateWith = null;
   chatRef.off();
-  document.getElementById("chat").innerHTML = "";
+  chat.innerHTML = "";
   document.getElementById("mode").innerText = "🌍 Global Chat";
   chatRef = db.ref("globalChat");
   listen();
 }
 
+/* 🔒 OPEN PRIVATE CHAT */
 function openPrivateChat(otherUser) {
   const me = document.getElementById("name").value;
   if (!me) return alert("Enter your name first");
@@ -99,7 +121,8 @@ function openPrivateChat(otherUser) {
 
   const chatId = [me, otherUser].sort().join("_");
   chatRef.off();
-  document.getElementById("chat").innerHTML = "";
+  chat.innerHTML = "";
+
   document.getElementById("mode").innerHTML =
     `🔒 Private chat with <b>${otherUser}</b>
      <button onclick="switchToGlobal()">Back</button>`;
@@ -108,6 +131,7 @@ function openPrivateChat(otherUser) {
   listen();
 }
 
+/* ✉️ SEND MESSAGE */
 function sendMessage() {
   const name = document.getElementById("name").value || "Anonymous";
   const message = document.getElementById("message").value;
@@ -119,9 +143,19 @@ function sendMessage() {
     time: new Date().toLocaleString()
   });
 
+  /* 🔔 NOTIFY OTHER USER IF PRIVATE */
+  if (currentMode === "private") {
+    const chatId = [name, privateWith].sort().join("_");
+    db.ref("privateInbox/" + privateWith + "/" + chatId).set({
+      from: name,
+      time: Date.now()
+    });
+  }
+
   document.getElementById("message").value = "";
 }
 
+/* 👂 LISTEN FOR MESSAGES */
 function listen() {
   chatRef.limitToLast(100).on("child_added", snap => {
     const d = snap.val();
@@ -138,6 +172,7 @@ function listen() {
       ${replyBtn}
       <div class="time">${d.time}</div>
     `;
+
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
   });
@@ -148,7 +183,3 @@ listen();
 
 </body>
 </html>
-
-
-
-
