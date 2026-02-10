@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Chat Rooms</title>
+<title>SchoolChat</title>
 
 <style>
 body {
@@ -54,7 +54,7 @@ button {
 
 <body>
 
-<div id="top">🌍 Global Chat</div>
+<div id="top">SchoolChat</div>
 <div id="roomSetup"></div>
 <div id="chat"></div>
 
@@ -103,7 +103,7 @@ if (!roomId) {
   chatRef = db.ref("globalChat");
 
   let buttons = `
-    <input id="limit" type="number" min="1" placeholder="User limit">
+    <input id="limit" type="number" min="1" placeholder="How many people">
     <button onclick="createRoom()">Create Private Room</button>
   `;
 
