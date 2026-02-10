@@ -95,13 +95,27 @@ function generateRoomId() {
   return Math.random().toString(36).substring(2, 10);
 }
 
+/* 🔙 LAST ROOM MEMORY */
+const lastRoom = localStorage.getItem("lastPrivateRoom");
+
 /* 🚪 SETUP CHAT */
 if (!roomId) {
   chatRef = db.ref("globalChat");
-  document.getElementById("roomSetup").innerHTML = `
+
+  let buttons = `
     <input id="limit" type="number" min="1" placeholder="User limit">
     <button onclick="createRoom()">Create Private Room</button>
   `;
+
+  if (lastRoom) {
+    buttons += `
+      <br>
+      <button onclick="goToLastRoom()">🔒 Go back to my private room</button>
+    `;
+  }
+
+  document.getElementById("roomSetup").innerHTML = buttons;
+
 } else {
   document.getElementById("top").innerText = "🔒 Private Room";
 
@@ -128,13 +142,21 @@ function createRoom() {
     maxUsers: Number(limit)
   });
 
+  localStorage.setItem("lastPrivateRoom", newRoom);
   window.location.search = "?room=" + newRoom;
+}
+
+/* 🔒 RETURN TO LAST ROOM */
+function goToLastRoom() {
+  const room = localStorage.getItem("lastPrivateRoom");
+  if (room) {
+    window.location.search = "?room=" + room;
+  }
 }
 
 /* 📋 COPY LINK */
 function copyRoomLink() {
-  const link = window.location.href;
-  navigator.clipboard.writeText(link);
+  navigator.clipboard.writeText(window.location.href);
   alert("Room link copied!");
 }
 
