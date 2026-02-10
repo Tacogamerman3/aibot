@@ -52,6 +52,15 @@ body {
   border-left: 3px solid var(--teal);
 }
 
+.msg.selectable {
+  cursor: pointer;
+}
+
+.msg.selected {
+  background: #3f1d1d;
+  border-left-color: #f87171;
+}
+
 .time {
   font-size: 0.8em;
   color: var(--muted);
@@ -95,6 +104,11 @@ button:hover { background: var(--teal-dark); }
 
 <div id="top">SchoolChat</div>
 <div id="roomSetup"></div>
+
+<div id="bulkDelete" style="display:none;text-align:center;padding:6px">
+  <button onclick="deleteSelected()">🗑️ Delete Selected</button>
+</div>
+
 <div id="chat"></div>
 
 <div id="input">
@@ -121,9 +135,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* 🔐 OPENSESAME ADMIN MODE */
+/* 🔐 ADMIN MODE */
 let adminMode = false;
 let secretBuffer = "";
+let selectedMessages = new Set();
 
 document.addEventListener("keydown", e => {
   if (e.key.length === 1) {
@@ -133,8 +148,8 @@ document.addEventListener("keydown", e => {
     if (secretBuffer.includes("opensesame")) {
       adminMode = true;
       alert("🔓 Delete mode enabled");
-      document.querySelectorAll(".delete-btn")
-        .forEach(b => b.style.display = "inline");
+      document.getElementById("bulkDelete").style.display = "block";
+      document.querySelectorAll(".msg").forEach(m => m.classList.add("selectable"));
     }
   }
 });
@@ -209,59 +224,22 @@ if (!roomId) {
   `;
 }
 
-/* 🛠️ CREATE ROOM */
-function createRoom() {
-  const name = roomName.value.trim();
-  const limit = Number(limitInput?.value || limit.value);
-
-  if (!name || !limit) return alert("Fill everything");
-
-  const id = name.toLowerCase().replace(/\s+/g, "-");
-  db.ref("rooms/" + id).set({ name, maxUsers: limit });
-  saveRoom(id, name);
-  location.search = "?room=" + id;
-}
-
-function goBack() {
-  location.href = location.pathname;
-}
-
-function copyRoomLink() {
-  navigator.clipboard.writeText(location.href);
-  alert("Link copied");
-}
-
-/* 👥 JOIN */
-function joinRoom(name) {
-  usersRef.once("value", s => {
-    if (maxUsers !== null && s.numChildren() >= maxUsers && !s.hasChild(name)) {
-      alert("Room full");
-      goBack();
-    } else usersRef.child(name).set(true);
-  });
-}
-
 /* ✉️ SEND */
 function sendMessage() {
   const name = document.getElementById("name").value || "Anonymous";
   const msg = message.value;
   if (!msg) return;
-  if (roomId) joinRoom(name);
-
-  chatRef.push({
-    name,
-    message: msg,
-    time: new Date().toLocaleString()
-  });
-
+  chatRef.push({ name, message: msg, time: new Date().toLocaleString() });
   message.value = "";
 }
 
-/* 🗑️ DELETE */
-function deleteMessage(key) {
-  if (!adminMode) return;
-  if (!confirm("Delete this message?")) return;
-  chatRef.child(key).remove();
+/* 🗑️ BULK DELETE */
+function deleteSelected() {
+  if (!adminMode || selectedMessages.size === 0) return;
+  if (!confirm(`Delete ${selectedMessages.size} messages?`)) return;
+
+  selectedMessages.forEach(key => chatRef.child(key).remove());
+  selectedMessages.clear();
 }
 
 /* 👂 LISTEN */
@@ -271,12 +249,25 @@ chatRef.limitToLast(100).on("child_added", s => {
 
   const div = document.createElement("div");
   div.className = "msg";
+  div.dataset.key = key;
+
   div.innerHTML = `
     <b>${d.name}</b>: ${d.message}
     <div class="time">${d.time}</div>
-    <button class="delete-btn" style="display:${adminMode ? "inline" : "none"}"
-      onclick="deleteMessage('${key}')">🗑️</button>
   `;
+
+  div.onclick = () => {
+    if (!adminMode) return;
+    if (selectedMessages.has(key)) {
+      selectedMessages.delete(key);
+      div.classList.remove("selected");
+    } else {
+      selectedMessages.add(key);
+      div.classList.add("selected");
+    }
+  };
+
+  if (adminMode) div.classList.add("selectable");
 
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
