@@ -19,6 +19,7 @@ body {
 #roomSetup {
   padding:10px;
   background:#1a1a1a;
+  text-align:center;
 }
 #chat {
   height:70vh;
@@ -46,6 +47,7 @@ button {
   border:none;
   padding:6px 10px;
   cursor:pointer;
+  margin:3px;
 }
 </style>
 </head>
@@ -66,7 +68,7 @@ button {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-/* 🔧 FIREBASE CONFIG (YOURS) */
+/* 🔧 FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyBY9HBBcV_YNZ020xbhukg6GqGEreF6QD4",
   authDomain: "jewsjewsjewsjewsjews.firebaseapp.com",
@@ -96,8 +98,18 @@ function generateRoomId() {
 /* 🚪 SETUP CHAT */
 if (!roomId) {
   chatRef = db.ref("globalChat");
+  document.getElementById("roomSetup").innerHTML = `
+    <input id="limit" type="number" min="1" placeholder="User limit">
+    <button onclick="createRoom()">Create Private Room</button>
+  `;
 } else {
   document.getElementById("top").innerText = "🔒 Private Room";
+
+  document.getElementById("roomSetup").innerHTML = `
+    <button onclick="copyRoomLink()">📋 Copy Room Link</button>
+    <button onclick="goBack()">🔙 Back to Main Chat</button>
+  `;
+
   chatRef = db.ref("rooms/" + roomId + "/messages");
   usersRef = db.ref("rooms/" + roomId + "/users");
 
@@ -106,14 +118,7 @@ if (!roomId) {
   });
 }
 
-/* 🛠️ CREATE ROOM UI */
-if (!roomId) {
-  document.getElementById("roomSetup").innerHTML = `
-    <input id="limit" type="number" min="1" placeholder="User limit">
-    <button onclick="createRoom()">Create Private Room</button>
-  `;
-}
-
+/* 🛠️ CREATE ROOM */
 function createRoom() {
   const limit = document.getElementById("limit").value;
   if (!limit || limit < 1) return alert("Enter a valid user limit");
@@ -126,6 +131,18 @@ function createRoom() {
   window.location.search = "?room=" + newRoom;
 }
 
+/* 📋 COPY LINK */
+function copyRoomLink() {
+  const link = window.location.href;
+  navigator.clipboard.writeText(link);
+  alert("Room link copied!");
+}
+
+/* 🔙 BACK TO GLOBAL */
+function goBack() {
+  window.location.href = window.location.pathname;
+}
+
 /* 👥 JOIN ROOM */
 function joinRoom(name) {
   if (!usersRef) return;
@@ -134,7 +151,7 @@ function joinRoom(name) {
     const count = snap.numChildren();
     if (maxUsers !== null && count >= maxUsers && !snap.hasChild(name)) {
       alert("Room is full");
-      window.location.href = window.location.pathname;
+      goBack();
       return;
     }
     usersRef.child(name).set(true);
@@ -158,7 +175,7 @@ function sendMessage() {
   document.getElementById("message").value = "";
 }
 
-/* 👂 LISTEN FOR MESSAGES */
+/* 👂 LISTEN */
 chatRef.limitToLast(100).on("child_added", snap => {
   const d = snap.val();
   const div = document.createElement("div");
