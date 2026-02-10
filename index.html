@@ -28,8 +28,6 @@ input, select { flex:1; padding:12px; border:none; background:#0f1416; color:var
 button { background:var(--teal); border:none; padding:8px 12px; margin:4px; cursor:pointer; font-weight:bold; }
 button:hover { background:var(--teal-dark); }
 .delete-btn { background:transparent; color:#f87171; border:none; cursor:pointer; font-size:0.8em; }
-.reply-btn { background:transparent; color:#14b8a6; border:none; cursor:pointer; font-size:0.8em; margin-left:5px; }
-.reply-container { margin-left:15px; border-left:1px dashed #14b8a6; padding-left:10px; margin-top:5px; }
 </style>
 </head>
 
@@ -104,16 +102,11 @@ function goBack(){ location.href=location.pathname; }
 function copyRoomLink(){ navigator.clipboard.writeText(location.href); alert("Link copied"); }
 
 /* ✉️ SEND MESSAGE */
-function sendMessage(replyTo=null, privateReply=false){
+function sendMessage(){
   const name=document.getElementById("name").value||"Anonymous";
   const msg=document.getElementById("message").value;
   if(!msg) return;
-  const data = { name, message: msg, time: new Date().toLocaleString(), replies:{} };
-  if(replyTo){
-    db.ref(chatRef.path.pieces_.join('/')+'/'+replyTo+'/replies').push({ ...data, private: privateReply, originalSender: replyTo.originalSender||name });
-  }else{
-    chatRef.push(data);
-  }
+  chatRef.push({ name, message: msg, time: new Date().toLocaleString() });
   document.getElementById("message").value="";
 }
 
@@ -125,36 +118,7 @@ chatRef.limitToLast(100).on("child_added", s=>{
   const d=s.val(); const key=s.key;
   const div=document.createElement("div");
   div.className="msg";
-  const name=document.getElementById("name").value||"Anonymous";
-  
-  function renderReplies(repliesObj){
-    const container=document.createElement("div");
-    container.className="reply-container";
-    if(!repliesObj) return container;
-    Object.keys(repliesObj).forEach(rKey=>{
-      const r=repliesObj[rKey];
-      if(r.private && r.originalSender!==name && r.name!==name) return;
-      const rDiv=document.createElement("div");
-      rDiv.innerHTML=`<b>${r.name}${r.private?" (private)":""}</b>: ${r.message}<div class="time">${r.time}</div>`;
-      container.appendChild(rDiv);
-    });
-    return container;
-  }
-  
   div.innerHTML=`<b>${d.name}</b>: ${d.message}<div class="time">${d.time}</div>`;
-  const replyBtn=document.createElement("button");
-  replyBtn.className="reply-btn";
-  replyBtn.textContent="Reply";
-  replyBtn.onclick=()=>{ const msg=prompt("Reply message"); if(msg) sendMessage({originalSender:d.name,key:key}, false); };
-  
-  const privateBtn=document.createElement("button");
-  privateBtn.className="reply-btn";
-  privateBtn.textContent="Private Reply";
-  privateBtn.onclick=()=>{ const msg=prompt("Private reply message"); if(msg) sendMessage({originalSender:d.name,key:key}, true); };
-  
-  div.appendChild(replyBtn);
-  div.appendChild(privateBtn);
-  div.appendChild(renderReplies(d.replies));
   
   const delBtn=document.createElement("button");
   delBtn.className="delete-btn";
