@@ -139,6 +139,23 @@ document.addEventListener("keydown", e => {
   }
 });
 
+/* 🧬 USER ID COOKIE */
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? match[2] : null;
+}
+
+function setCookie(name, value, days = 365) {
+  const expires = new Date(Date.now() + days*24*60*60*1000).toUTCString();
+  document.cookie = `${name}=${value}; expires=${expires}; path=/`;
+}
+
+let userId = getCookie("userId");
+if (!userId) {
+  userId = "u" + Math.random().toString(36).substring(2, 10);
+  setCookie("userId", userId);
+}
+
 /* 🧠 PREVIOUS ROOMS */
 function getRooms() {
   return JSON.parse(localStorage.getItem("previousRooms") || "[]");
@@ -178,14 +195,13 @@ function renderRoomDropdown() {
 /* 🔗 ROOM LOGIC */
 const params = new URLSearchParams(location.search);
 const roomId = params.get("room");
-let chatRef, usersRef, maxUsers = null;
+let chatRef, usersRef;
 
 /* 🚪 SETUP */
 if (!roomId) {
   chatRef = db.ref("globalChat");
   roomSetup.innerHTML = `
     <input id="roomName" placeholder="Room name">
-    <input id="limit" type="number" min="1" placeholder="How many people">
     <button onclick="createRoom()">Create Private Room</button>
     <hr>
     ${renderRoomDropdown()}
@@ -199,10 +215,6 @@ if (!roomId) {
     saveRoom(roomId, s.val());
   });
 
-  db.ref("rooms/" + roomId + "/maxUsers").once("value", s => {
-    maxUsers = s.val();
-  });
-
   roomSetup.innerHTML = `
     <button onclick="copyRoomLink()">📋 Copy Room Link</button>
     <button onclick="goBack()">🔙 Back</button>
@@ -212,18 +224,11 @@ if (!roomId) {
 /* 🛠️ CREATE ROOM */
 function createRoom() {
   const nameInput = document.getElementById("roomName");
-  const limitInput = document.getElementById("limit");
-
   const name = nameInput.value.trim();
-  const limit = Number(limitInput.value);
+  if (!name) return alert("Enter room name");
 
-  if (!name || !limit) return alert("Fill everything");
-  if (limit < 1) return alert("Limit must be at least 1");
-
-  // Unique room ID to avoid collisions
   const id = name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
-
-  db.ref("rooms/" + id).set({ name, maxUsers: limit });
+  db.ref("rooms/" + id).set({ name });
   saveRoom(id, name);
   location.search = "?room=" + id;
 }
@@ -237,29 +242,15 @@ function copyRoomLink() {
   alert("Link copied");
 }
 
-/* 👥 JOIN */
-function joinRoom(name) {
-  if (!usersRef) return;
-
-  usersRef.once("value", snapshot => {
-    if (maxUsers !== null && snapshot.numChildren() >= maxUsers && !snapshot.hasChild(name)) {
-      alert("Room full");
-      goBack();
-    } else {
-      usersRef.child(name).set(true);
-    }
-  });
-}
-
 /* ✉️ SEND */
 function sendMessage() {
-  const name = document.getElementById("name").value || "Anonymous";
+  const nameInput = document.getElementById("name").value || "Anonymous";
+  const displayName = `${nameInput} (${userId})`;
   const msg = message.value;
   if (!msg) return;
-  if (roomId) joinRoom(name);
 
   chatRef.push({
-    name,
+    name: displayName,
     message: msg,
     time: new Date().toLocaleString()
   });
