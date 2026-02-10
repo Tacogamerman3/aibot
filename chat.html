@@ -62,7 +62,7 @@ body {
   background: var(--panel);
 }
 
-input {
+input, select {
   flex: 1;
   padding: 12px;
   border: none;
@@ -70,15 +70,12 @@ input {
   color: var(--text);
 }
 
-input::placeholder { color: var(--muted); }
-
 button {
   background: var(--teal);
-  color: #002;
   border: none;
   padding: 8px 12px;
+  margin: 4px;
   cursor: pointer;
-  margin: 3px;
   font-weight: bold;
 }
 
@@ -90,7 +87,6 @@ button:hover { background: var(--teal-dark); }
   border: none;
   cursor: pointer;
   font-size: 0.8em;
-  margin-left: 6px;
 }
 </style>
 </head>
@@ -126,161 +122,137 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 /* 🧠 PREVIOUS ROOMS */
-function getPreviousRooms() {
+function getRooms() {
   return JSON.parse(localStorage.getItem("previousRooms") || "[]");
 }
 
-function saveRoom(roomId, roomName = roomId) {
-  let rooms = getPreviousRooms();
-  rooms = rooms.filter(r => r.id !== roomId);
-  rooms.unshift({ id: roomId, name: roomName });
-  rooms = rooms.slice(0, 10);
-  localStorage.setItem("previousRooms", JSON.stringify(rooms));
+function saveRoom(id, name) {
+  let rooms = getRooms().filter(r => r.id !== id);
+  rooms.unshift({ id, name });
+  localStorage.setItem("previousRooms", JSON.stringify(rooms.slice(0, 10)));
 }
 
-function renderPreviousRooms() {
-  const rooms = getPreviousRooms();
+function deleteRoom(id) {
+  let rooms = getRooms().filter(r => r.id !== id);
+  localStorage.setItem("previousRooms", JSON.stringify(rooms));
+  location.reload();
+}
+
+function renderRoomDropdown() {
+  const rooms = getRooms();
   if (!rooms.length) return "";
 
-  let html = `<h3 style="color:var(--teal)">Previous Rooms</h3>`;
+  let html = `
+    <details>
+      <summary style="cursor:pointer;color:var(--teal)">🔽 Previous Rooms</summary>
+  `;
+
   rooms.forEach(r => {
     html += `
-      <button onclick="window.location.search='?room=${r.id}'">
-        🔒 ${r.name}
-      </button><br>
+      <div style="margin:5px">
+        <button onclick="location.search='?room=${r.id}'">🔒 ${r.name}</button>
+        <button class="delete-btn" onclick="deleteRoom('${r.id}')">🗑️</button>
+      </div>
     `;
   });
+
+  html += `</details>`;
   return html;
 }
 
 /* 🔗 ROOM LOGIC */
-const params = new URLSearchParams(window.location.search);
-let roomId = params.get("room");
-let chatRef;
-let usersRef;
-let maxUsers = null;
+const params = new URLSearchParams(location.search);
+const roomId = params.get("room");
+let chatRef, usersRef, maxUsers = null;
 
 /* 🚪 SETUP */
 if (!roomId) {
   chatRef = db.ref("globalChat");
 
-  let ui = `
-    <input id="roomName" type="text" placeholder="Room name">
+  document.getElementById("roomSetup").innerHTML = `
+    <input id="roomName" placeholder="Room name">
     <input id="limit" type="number" min="1" placeholder="How many people">
     <button onclick="createRoom()">Create Private Room</button>
+    <hr>
+    ${renderRoomDropdown()}
   `;
-
-  document.getElementById("roomSetup").innerHTML =
-    ui + "<hr>" + renderPreviousRooms();
-
 } else {
   chatRef = db.ref("rooms/" + roomId + "/messages");
   usersRef = db.ref("rooms/" + roomId + "/users");
 
-  db.ref("rooms/" + roomId + "/name").once("value", snap => {
-    const roomName = snap.val() || "Private Room";
-    document.getElementById("top").innerText = "🔒 " + roomName;
-    saveRoom(roomId, roomName);
+  db.ref("rooms/" + roomId + "/name").once("value", s => {
+    const name = s.val() || "Private Room";
+    document.getElementById("top").innerText = "🔒 " + name;
+    saveRoom(roomId, name);
   });
 
-  db.ref("rooms/" + roomId + "/maxUsers").once("value", snap => {
-    maxUsers = snap.val();
+  db.ref("rooms/" + roomId + "/maxUsers").once("value", s => {
+    maxUsers = s.val();
   });
 
   document.getElementById("roomSetup").innerHTML = `
     <button onclick="copyRoomLink()">📋 Copy Room Link</button>
+    <button onclick="goBack()">🔙 Back to Main Chat</button>
   `;
 }
 
 /* 🛠️ CREATE ROOM */
 function createRoom() {
-  const limit = document.getElementById("limit").value;
-  const roomName = document.getElementById("roomName").value.trim();
-  if (!limit || limit < 1) return alert("Enter a valid user limit");
-  if (!roomName) return alert("Enter a room name");
+  const name = roomName.value.trim();
+  const limit = limitInput.value || limit.value;
+  if (!name || limit < 1) return alert("Invalid input");
 
-  const newRoom = roomName.toLowerCase().replace(/\s+/g, '-');
+  const id = name.toLowerCase().replace(/\s+/g, "-");
 
-  db.ref("rooms/" + newRoom).set({
-    name: roomName,
-    maxUsers: Number(limit)
-  });
+  db.ref("rooms/" + id).set({ name, maxUsers: Number(limit) });
+  saveRoom(id, name);
+  location.search = "?room=" + id;
+}
 
-  saveRoom(newRoom, roomName);
-  window.location.search = "?room=" + newRoom;
+function goBack() {
+  location.href = location.pathname;
 }
 
 function copyRoomLink() {
-  navigator.clipboard.writeText(window.location.href);
-  alert("Room link copied!");
+  navigator.clipboard.writeText(location.href);
+  alert("Link copied");
 }
 
-/* 👥 JOIN ROOM */
+/* 👥 JOIN */
 function joinRoom(name) {
-  if (!usersRef) return;
-
-  usersRef.once("value", snap => {
-    const count = snap.numChildren();
-    if (maxUsers !== null && count >= maxUsers && !snap.hasChild(name)) {
-      alert("Room is full");
-      window.location.href = window.location.pathname;
-      return;
-    }
-    usersRef.child(name).set(true);
+  usersRef.once("value", s => {
+    if (maxUsers !== null && s.numChildren() >= maxUsers && !s.hasChild(name)) {
+      alert("Room full");
+      goBack();
+    } else usersRef.child(name).set(true);
   });
 }
 
-/* ✉️ SEND MESSAGE */
+/* ✉️ SEND */
 function sendMessage() {
   const name = document.getElementById("name").value || "Anonymous";
-  const message = document.getElementById("message").value;
-  if (!message) return;
-
+  const msg = message.value;
+  if (!msg) return;
   if (roomId) joinRoom(name);
 
   chatRef.push({
     name,
-    message,
+    message: msg,
     time: new Date().toLocaleString()
   });
 
-  document.getElementById("message").value = "";
-}
-
-/* 🗑️ DELETE MESSAGE */
-function deleteMessage(key) {
-  if (confirm("Delete this message?")) {
-    chatRef.child(key).remove();
-  }
+  message.value = "";
 }
 
 /* 👂 LISTEN */
-chatRef.limitToLast(100).on("child_added", snap => {
-  const d = snap.val();
-  const key = snap.key;
-  const me = document.getElementById("name").value;
-
+chatRef.limitToLast(100).on("child_added", s => {
+  const d = s.val();
   const div = document.createElement("div");
   div.className = "msg";
-
-  const deleteBtn =
-    d.name === me
-      ? `<button class="delete-btn" onclick="deleteMessage('${key}')">Delete</button>`
-      : "";
-
-  function linkify(text) {
-    return text.replace(
-      /(https?:\/\/[^\s]+)/g,
-      '<a href="$1" target="_blank" style="color:var(--teal)">$1</a>'
-    );
-  }
-
   div.innerHTML = `
-    <b>${d.name}</b>: ${linkify(d.message)}
-    ${deleteBtn}
+    <b>${d.name}</b>: ${d.message}
     <div class="time">${d.time}</div>
   `;
-
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
 });
