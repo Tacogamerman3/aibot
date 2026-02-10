@@ -1,272 +1,279 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Button Example</title>
-   <style>
-    
-    
-    /* Position the button in the top-right corner */
-    .top-right-button {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 10px 20px;
-      background-color: #4CAF50; /* Green color */
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-      text-decoration: none;
-    }
+<meta charset="UTF-8">
+<title>SchoolChat</title>
 
-    .top-right-button:hover {
-      background-color: #45a049; /* Slightly darker on hover */
-    }
-  </style>
+<style>
+@media screen and (min-width: 768px) {
+  body { zoom: 90%; }
+}
 
+:root {
+  --bg: #0b0f10;
+  --panel: #11181a;
+  --teal: #14b8a6;
+  --teal-dark: #0f766e;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+}
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.indigo-pink.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-design-icons/3.0.1/iconfont/material-icons.css">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHATGPT</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Courier New', Courier, monospace;
-            background-color: #030303;
-            background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                              linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
-            color: #00ff41;
-        }
+body {
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+}
 
-        .header {
-            background-color: #fcee0a;
-            color: #000;
-            padding: 16px;
-            text-align: left;
-            font-weight: 900;
-            font-size: 22px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            clip-path: polygon(0 0, 100% 0, 100% 70%, 95% 100%, 0 100%);
-            border-bottom: 4px solid #00f0ff;
-        }
+#top {
+  background: var(--panel);
+  padding: 10px;
+  text-align: center;
+  color: var(--teal);
+  font-weight: bold;
+}
 
-        .container {
-            display: flex;
-            flex-direction: column;
-            height: 95vh;
-            max-width: 500px;
-            margin: 10px auto;
-            border: 2px solid #fcee0a;
-            background-color: rgba(20, 20, 20, 0.9);
-            box-shadow: 0 0 15px rgba(252, 238, 10, 0.3);
-            position: relative;
-        }
+#roomSetup {
+  padding: 10px;
+  background: #0f1416;
+  text-align: center;
+}
 
-        .chatbox {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+#chat {
+  height: 70vh;
+  overflow-y: auto;
+  padding: 12px;
+}
 
-        /* Avatar System */
-        .message-wrapper {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            max-width: 90%;
-        }
+.msg {
+  background: #0f1416;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--teal);
+}
 
-        .user-wrapper {
-            flex-direction: row-reverse;
-            align-self: flex-end;
-        }
+.time {
+  font-size: 0.8em;
+  color: var(--muted);
+}
 
-        .assistant-wrapper {
-            align-self: flex-start;
-        }
+#input {
+  display: flex;
+  background: var(--panel);
+}
 
-        .avatar {
-            width: 40px;
-            height: 40px;
-            border: 2px solid;
-            flex-shrink: 0;
-            background-size: cover;
-            clip-path: polygon(0 0, 100% 0, 100% 80%, 80% 100%, 0 100%);
-        }
+input, select {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: #0f1416;
+  color: var(--text);
+}
 
-        .user-avatar {
-            border-color: #00f0ff;
-            background-image: url('https://api.dicebear.com/7.x/pixel-art/svg?seed=Felix'); /* User Icon */
-        }
+button {
+  background: var(--teal);
+  border: none;
+  padding: 8px 12px;
+  margin: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
 
-        .assistant-avatar {
-            border-color: #fcee0a;
-            background-image: url('https://api.dicebear.com/7.x/bottts/svg?seed=Cyber'); /* AI Icon */
-        }
+button:hover { background: var(--teal-dark); }
 
-        .chat-message {
-            padding: 12px 16px;
-            font-size: 14px;
-            position: relative;
-            word-wrap: break-word;
-        }
-
-        .user-message {
-            background-color: #00f0ff;
-            color: #000;
-            font-weight: bold;
-            clip-path: polygon(0 0, 100% 0, 100% 100%, 10% 100%, 0 80%);
-            border-right: 4px solid #ff003c;
-        }
-
-        .assistant-message {
-            background-color: #222;
-            color: #fcee0a;
-            clip-path: polygon(0 0, 90% 0, 100% 20%, 100% 100%, 0 100%);
-            border-left: 4px solid #fcee0a;
-            text-shadow: 0 0 5px rgba(252, 238, 10, 0.5);
-        }
-
-        .input-area {
-            padding: 15px;
-            background-color: #111;
-            border-top: 2px solid #fcee0a;
-            display: flex;
-        }
-
-        .input-area input {
-            flex: 1;
-            padding: 12px;
-            background: #000;
-            border: 1px solid #00f0ff;
-            color: #00f0ff;
-            margin-right: 10px;
-            outline: none;
-        }
-
-        .input-area button {
-            background-color: #ff003c;
-            color: white;
-            font-weight: bold;
-            text-transform: uppercase;
-            border: none;
-            padding: 0 15px;
-            cursor: pointer;
-            clip-path: polygon(0 0, 100% 0, 100% 70%, 80% 100%, 0 100%);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .input-area button:disabled {
-            background-color: #555;
-            cursor: not-allowed;
-        }
-
-        .chatbox::-webkit-scrollbar { width: 4px; }
-        .chatbox::-webkit-scrollbar-thumb { background: #fcee0a; }
-    </style>
+.delete-btn {
+  background: transparent;
+  color: #f87171;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+</style>
 </head>
+
 <body>
-      <!-- Button that redirects to chat.html -->
-  <a href="chat.html" class="top-right-button">Go to SchoolChat</a>
-    <div class="container">
-        <div class="header">CHATGPT</div>
-        <div id="chatbox" class="chatbox"></div>
-        <div class="input-area">
-            <input id="chatInput" type="text" placeholder="say something..." />
-            <button id="sendButton">
-                <span class="material-icons">bolt</span> SEND
-            </button>
-        </div>
-    </div>
 
-    <script>
-        const sendButton = document.getElementById("sendButton");
-        const chatInput = document.getElementById('chatInput');
-        const chatbox = document.getElementById('chatbox');
+<div id="top">SchoolChat</div>
+<div id="roomSetup"></div>
+<div id="chat"></div>
 
-        function displayMessage(message, isUser) {
-            const wrapper = document.createElement('div');
-            wrapper.className = `message-wrapper ${isUser ? 'user-wrapper' : 'assistant-wrapper'}`;
+<div id="input">
+  <input id="name" placeholder="Your name">
+  <input id="message" placeholder="Type message">
+  <button onclick="sendMessage()">Send</button>
+</div>
 
-            const avatar = document.createElement('div');
-            avatar.className = `avatar ${isUser ? 'user-avatar' : 'assistant-avatar'}`;
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-            const msgElem = document.createElement('div');
-            msgElem.textContent = message;
-            msgElem.className = `chat-message ${isUser ? 'user-message' : 'assistant-message'}`;
+<script>
+/* 🔧 FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyBY9HBBcV_YNZ020xbhukg6GqGEreF6QD4",
+  authDomain: "jewsjewsjewsjewsjews.firebaseapp.com",
+  databaseURL: "https://jewsjewsjewsjewsjews-default-rtdb.firebaseio.com",
+  projectId: "jewsjewsjewsjewsjews",
+  storageBucket: "jewsjewsjewsjewsjews.firebasestorage.app",
+  messagingSenderId: "916953901589",
+  appId: "1:916953901589:web:bedc562fe6a9884a597c1c"
+};
 
-            wrapper.appendChild(avatar);
-            wrapper.appendChild(msgElem);
-            chatbox.appendChild(wrapper);
-            
-            chatbox.scrollTop = chatbox.scrollHeight;
-        }
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-        async function handleSendMessage() {
-            const message = chatInput.value.trim();
-            if (!message) return;
+/* 🧠 PREVIOUS ROOMS */
+function getRooms() {
+  return JSON.parse(localStorage.getItem("previousRooms") || "[]");
+}
 
-            // 1. Tampilkan pesan user
-            displayMessage(message, true);
-            chatInput.value = '';
+function saveRoom(id, name) {
+  let rooms = getRooms().filter(r => r.id !== id);
+  rooms.unshift({ id, name });
+  localStorage.setItem("previousRooms", JSON.stringify(rooms.slice(0, 10)));
+}
 
-            // 2. Persiapan API
-            const apiUrl = message.startsWith('/image') ? 
-                'https://backend.buildpicoapps.com/aero/run/image-generation-api?pk=v1-Z0FBQUFBQm5HUEtMSjJkakVjcF9IQ0M0VFhRQ0FmSnNDSHNYTlJSblE0UXo1Q3RBcjFPcl9YYy1OZUhteDZWekxHdWRLM1M1alNZTkJMWEhNOWd4S1NPSDBTWC12M0U2UGc9PQ==' : 
-                'https://backend.buildpicoapps.com/aero/run/llm-api?pk=v1-Z0FBQUFBQm5HUEtMSjJkakVjcF9IQ0M0VFhRQ0FmSnNDSHNYTlJSblE0UXo1Q3RBcjFPcl9YYy1OZUhteDZWekxHdWRLM1M1alNZTkJMWEhNOWd4S1NPSDBTWC12M0U2UGc9PQ==';
+function deleteRoom(id) {
+  let rooms = getRooms().filter(r => r.id !== id);
+  localStorage.setItem("previousRooms", JSON.stringify(rooms));
+  location.reload();
+}
 
-            // UI State saat loading
-            chatInput.disabled = true;
-            sendButton.disabled = true;
-            chatInput.placeholder = "Processing data...";
+function renderRoomDropdown() {
+  const rooms = getRooms();
+  if (!rooms.length) return "";
 
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({prompt: message})
-                });
-                
-                const data = await response.json();
+  let html = `
+    <details>
+      <summary style="cursor:pointer;color:var(--teal)">🔽 Previous Rooms</summary>
+  `;
 
-                if (data.status === 'success') {
-                    displayMessage(data.text, false);
-                } else {
-                    displayMessage('ERROR: Connection unstable. Retry.', false);
-                } 
-            } catch (error) {
-                console.error('Error:', error);
-                displayMessage('CRITICAL ERROR: System offline.', false);
-            } finally {
-                chatInput.disabled = false;
-                sendButton.disabled = false;
-                chatInput.placeholder = "Type your message";
-                chatInput.focus();
-            }
-        }
+  rooms.forEach(r => {
+    html += `
+      <div style="margin:5px">
+        <button onclick="location.search='?room=${r.id}'">🔒 ${r.name}</button>
+        <button class="delete-btn" onclick="deleteRoom('${r.id}')">🗑️</button>
+      </div>
+    `;
+  });
 
-        // Event Listeners
-        sendButton.addEventListener('click', handleSendMessage);
-        
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleSendMessage();
-        });
+  html += `</details>`;
+  return html;
+}
 
-        // Fokus awal
-        chatInput.focus();
-    </script>
+/* 🔗 ROOM LOGIC */
+const params = new URLSearchParams(location.search);
+const roomId = params.get("room");
+let chatRef, usersRef, maxUsers = null;
+
+/* 🚪 SETUP */
+if (!roomId) {
+  chatRef = db.ref("globalChat");
+
+  document.getElementById("roomSetup").innerHTML = `
+    <input id="roomName" placeholder="Room name">
+    <input id="limit" type="number" min="1" placeholder="How many people">
+    <button onclick="createRoom()">Create Private Room</button>
+    <hr>
+    ${renderRoomDropdown()}
+  `;
+} else {
+  chatRef = db.ref("rooms/" + roomId + "/messages");
+  usersRef = db.ref("rooms/" + roomId + "/users");
+
+  db.ref("rooms/" + roomId + "/name").once("value", s => {
+    const name = s.val() || "Private Room";
+    document.getElementById("top").innerText = "🔒 " + name;
+    saveRoom(roomId, name);
+  });
+
+  db.ref("rooms/" + roomId + "/maxUsers").once("value", s => {
+    maxUsers = s.val();
+  });
+
+  document.getElementById("roomSetup").innerHTML = `
+    <button onclick="copyRoomLink()">📋 Copy Room Link</button>
+    <button onclick="goBack()">🔙 Back to Main Chat</button>
+  `;
+}
+
+/* 🛠️ CREATE ROOM */
+function createRoom() {
+  const nameInput = document.getElementById("roomName");
+  const limitInput = document.getElementById("limit");
+
+  const name = nameInput.value.trim();
+  const limit = Number(limitInput.value);
+
+  if (!name) {
+    alert("Enter a room name");
+    return;
+  }
+
+  if (!limit || limit < 1) {
+    alert("Enter a valid user limit");
+    return;
+  }
+
+  const id = name.toLowerCase().replace(/\s+/g, "-");
+
+  db.ref("rooms/" + id).set({
+    name: name,
+    maxUsers: limit
+  });
+
+  saveRoom(id, name);
+  location.search = "?room=" + id;
+}
+
+
+function goBack() {
+  location.href = location.pathname;
+}
+
+function copyRoomLink() {
+  navigator.clipboard.writeText(location.href);
+  alert("Link copied");
+}
+
+/* 👥 JOIN */
+function joinRoom(name) {
+  usersRef.once("value", s => {
+    if (maxUsers !== null && s.numChildren() >= maxUsers && !s.hasChild(name)) {
+      alert("Room full");
+      goBack();
+    } else usersRef.child(name).set(true);
+  });
+}
+
+/* ✉️ SEND */
+function sendMessage() {
+  const name = document.getElementById("name").value || "Anonymous";
+  const msg = message.value;
+  if (!msg) return;
+  if (roomId) joinRoom(name);
+
+  chatRef.push({
+    name,
+    message: msg,
+    time: new Date().toLocaleString()
+  });
+
+  message.value = "";
+}
+
+/* 👂 LISTEN */
+chatRef.limitToLast(100).on("child_added", s => {
+  const d = s.val();
+  const div = document.createElement("div");
+  div.className = "msg";
+  div.innerHTML = `
+    <b>${d.name}</b>: ${d.message}
+    <div class="time">${d.time}</div>
+  `;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+});
+</script>
+
 </body>
 </html>
